@@ -9,6 +9,7 @@ import copy
 import re
 import os
 import threading
+
 lock = threading.Lock()
 music_choose_list = []
 music_info_dict = {'雨蝶':{'num':1, 'path':'music/雨蝶.mp3', 'length':20}}
@@ -106,7 +107,6 @@ def generate_background():
             draw.text((text_x, text_y + i * gap), text, font = font, fill = '#ff0000')
         # 图片写入固定的background
         image_show.save('image/background.jpg')
-        xxx
         time.sleep(5)
 
 # 这一部分用来生成选择的音频
@@ -128,7 +128,14 @@ def generate_audio():
             print(f'start play {audio_name}')
         finally:
             lock.release()
-        time.sleep(audio_length)
+        # rtmp_url = 'rtmp://send3.douyu.com/live' + \
+        #            '3200597rtM2e3368?wsSecret=0f4067b91510dc5ba8fe7724ce575194&wsTime=5baecdd4&wsSeek=off&wm=0&tw=0'
+        rtmp_url = 'rtmp://10.2.9.89:1935/mytv/'
+        cmd = f"ffmpeg -re -loop 1 -i image/background.jpg -i {audio_name} -r 25 -t 200 -f flv '{rtmp_url}'"
+        print(cmd)
+        print('dadad')
+        time.sleep(20)
+
 p_image = threading.Thread(target = generate_background)
 p_audio = threading.Thread(target = generate_audio)
 p_barrage = threading.Thread(target = barrage_decision)
