@@ -7,12 +7,14 @@ import time
 from PIL import Image, ImageDraw, ImageFont
 import copy
 import re
-import os
+import cv2
 import threading
+import subprocess
+import sys
 
 lock = threading.Lock()
 music_choose_list = []
-music_info_dict = {'雨蝶':{'num':1, 'path':'music/雨蝶.mp3', 'length':20}}
+music_info_dict = {'hush':{'num':1, 'path':'music/hush.mp3', 'length':1}}
 
 # 这一部分是根据歌名自动从qq音乐上下载对应的歌
 def download_music(word):
@@ -38,10 +40,11 @@ def download_music(word):
         f.write(music)
         f.close()
         print(f'下载{word}成功')
-        music_info_dict[word]['path'] = f'music/{word}.mp4'
-        music_info_dict[word]['length'] = 20
+        music_info_dict[word]['path'] = f'music/{word}.mp3'
+        music_info_dict[word]['length'] = 1
     except:
         print(f'下载{word}失败')
+    sys.stdout.flush()
 
 # 这一部分是处理弹幕输入的部分，应该持续运行，保证可以接收到正确的弹幕并对相关信息进行处理
 def barrage_decision():
@@ -70,6 +73,7 @@ def barrage_decision():
                 print(music_info_dict)
             finally:
                 lock.release()
+            sys.stdout.flush()
 
 # 这一部分是用来生成随机图片的部分，利用ffmpeg的特性，生成不同的背景图片实现视频的效果，每3秒钟进行一次更新
 def generate_background():
@@ -87,26 +91,28 @@ def generate_background():
             print(music_info_dict)
         finally:
             lock.release()
+        sys.stdout.flush()
         # 图片处理
+        global image_show
         image_show = image.copy()
         draw = ImageDraw.Draw(image_show)
         font = ImageFont.truetype('font/handan.ttf', 40)
+        gap = 40
         text_x = 0
         text_y = 500
-        gap = 30
         for i, text in enumerate(tmp_music_choose_list):
             draw.text((text_x, text_y + i * gap), text, font = font, fill = '#ff0000')
         # 加入已点歌曲
         f = [(v['num'], k) for k, v in tmp_music_info_dict.items()]
         f = sorted(f, reverse = True)
-        text_x = 800
+        text_x = 1100
         text_y = 500
-        gap = 30
         for i, (_, k) in enumerate(f):
             text = k + ': ' + str(tmp_music_info_dict[k]['num'])
             draw.text((text_x, text_y + i * gap), text, font = font, fill = '#ff0000')
-        # 图片写入固定的background
         image_show.save('image/background.jpg')
+        print('保存图片成功')
+        sys.stdout.flush()
         time.sleep(5)
 
 # 这一部分用来生成选择的音频
@@ -117,28 +123,25 @@ def generate_audio():
             f = [(v['num'], k) for k, v in music_info_dict.items()]
             f = sorted(f, reverse = True)
             for _, k in f:
-                if music_info_dict[k]['length'] > 0:
+                if music_info_dict[k]['length'] == 1:
                     break
             music_info_dict[k]['num'] = 0
             audio_name = music_info_dict[k]['path']
-            audio_length = music_info_dict[k]['length']
             print('generate_audio')
             print(music_choose_list)
             print(music_info_dict)
             print(f'start play {audio_name}')
         finally:
             lock.release()
-        # rtmp_url = 'rtmp://send3.douyu.com/live' + \
-        #            '3200597rtM2e3368?wsSecret=0f4067b91510dc5ba8fe7724ce575194&wsTime=5baecdd4&wsSeek=off&wm=0&tw=0'
-        rtmp_url = 'rtmp://10.2.9.89:1935/mytv/'
-        cmd = f"ffmpeg -re -loop 1 -i image/background.jpg -i {audio_name} -r 25 -t 200 -f flv '{rtmp_url}'"
+        sys.stdout.flush()
+        cmd = f'mplayer {audio_name}'
         print(cmd)
-        print('dadad')
-        time.sleep(20)
+        res = subprocess.getstatusoutput(cmd)
 
-p_image = threading.Thread(target = generate_background)
-p_audio = threading.Thread(target = generate_audio)
 p_barrage = threading.Thread(target = barrage_decision)
-p_image.start()
-p_audio.start()
+p_background = threading.Thread(target = generate_background)
+p_audio = threading.Thread(target = generate_audio)
+
 p_barrage.start()
+p_background.start()
+p_audio.start()

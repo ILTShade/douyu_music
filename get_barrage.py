@@ -71,7 +71,7 @@ def keeplive():
         msgstr = 'type@=keeplive/tick@=' + str(int(time.time())) + '/\0'
         sendmsg(msgstr)
 
-t1 = threading.Thread(target = get_barrage, args = ('288016',))
+t1 = threading.Thread(target = get_barrage, args = ('3200597',))
 t2 = threading.Thread(target = keeplive)
 t1.start()
 t2.start()
