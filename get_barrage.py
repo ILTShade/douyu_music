@@ -71,7 +71,11 @@ def keeplive():
         msgstr = 'type@=keeplive/tick@=' + str(int(time.time())) + '/\0'
         sendmsg(msgstr)
 
-t1 = threading.Thread(target = get_barrage, args = ('3200597',))
+assert len(sys.argv) == 2
+roomid_pattern = re.compile('^(\d*)')
+roomid = roomid_pattern.search(sys.argv[1])[0]
+
+t1 = threading.Thread(target = get_barrage, args = (roomid,))
 t2 = threading.Thread(target = keeplive)
 t1.start()
 t2.start()

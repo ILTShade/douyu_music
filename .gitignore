@@ -1,0 +1,8 @@
+/.DS_Store
+log.txt
+music/*.mp3
+!music/*.mp3
+image/background.jpg
+font/.DS_Store
+image/.DS_Store
+music/.DS_Store

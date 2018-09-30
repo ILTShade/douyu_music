@@ -6,4 +6,3 @@ while True:
         cv2.imshow('music', cv2.imread('image/background.jpg'))
         cv2.waitKey(10)
         print('显示图片成功')
-
