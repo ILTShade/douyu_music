@@ -155,35 +155,36 @@ def generate_background():
         finally:
             lock.release()
         sys.stdout.flush()
-        # 图片处理
-        global image_show
+        syn_time = time.time()
+        # 图片处理，字体为邯郸字体，颜色为黄色
         image_show = image.copy()
         draw = ImageDraw.Draw(image_show)
+        draw.ink = 255 + 255 * 256
         font = ImageFont.truetype('font/handan.ttf', 40)
+        # 点播歌曲列表
         gap = 40
         text_x = 0
-        text_y = 600
+        text_y = 400
         for i, text in enumerate(tmp_music_choose_list):
-            draw.text((text_x, text_y + i * gap), text, font = font, fill = '#ff0000')
+            draw.text((text_x, text_y + i * gap), text, font = font)
         # 加入已点歌曲，只显示点击量大于0，且存在的歌曲
         f = [(v['num'], k) for k, v in tmp_music_info_dict.items()]
         f = sorted(f, reverse = True)
-        text_x = 900
+        text_x = 750
         text_y = 400
         list_count = 0
         for _, k in f:
             if tmp_music_info_dict[k]['flag'] == 1 and tmp_music_info_dict[k]['num'] > 0:
                 text = tmp_music_info_dict[k]['songname'] + '_' + tmp_music_info_dict[k]['singername'] + ': ' + \
                        str(tmp_music_info_dict[k]['num'])
-                draw.text((text_x, text_y + list_count * gap), text, font = font, fill = '#ff0000')
+                draw.text((text_x, text_y + list_count * gap), text, font = font)
                 list_count = list_count + 1
-        # 加入正在播放歌曲
-        text_x = 400
-        text_y = 200
+        # 加入正在播放歌曲，计算位置，保证落在某处中间
         play_time = time.time() - start_time
         play_minute, play_second = divmod(play_time, 60)
         text = f'正在播放: {play_name} {int(play_minute)}:{int(play_second)} / {play_length}'
-        draw.text((text_x, text_y), text, font = font, fill = '#ff0000')
+        text_width, text_height = font.getsize(text)
+        draw.text((550 - text_width / 2, 180 - text_height), text, font = font)
         # 保存图片
         image_show.save('image/background.jpg')
         print('保存图片成功')
@@ -191,7 +192,9 @@ def generate_background():
         # 将现在的tmp_music_info_dict保存
         with open('history.txt', 'w') as f:
             f.write(json.dumps(tmp_music_info_dict))
-        time.sleep(3)
+        sleep_time = syn_time + 2 - time.time()
+        if sleep_time > 0.1:
+            time.sleep(sleep_time)
 
 # 这一部分用来生成选择的音频
 def generate_audio():
