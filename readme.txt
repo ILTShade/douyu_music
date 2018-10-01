@@ -24,4 +24,8 @@ show_image.py
 命令为
 python3 get_barrage.py {你的房间号} | python3 get_stream.py | python3 show_image.py > log.txt
 
-最后在本地用OBS推流即可
+最后在本地用OBS推流即可，推流为声音加上python music界面
+
+支持的功能：
+1，弹幕输入m歌名，例如m奇妙能力歌，即可点奇妙能力歌，使其点歌数量加1，然后点歌数量排序，切歌时切换到当前点歌量最高的歌曲
+2，弹幕输入mf，如果满足某些特殊用户，例如房管，即可实现自动切歌功能

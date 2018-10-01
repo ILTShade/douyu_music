@@ -23,10 +23,20 @@ lock = threading.Lock()
 music_choose_list = []
 music_info_dict = {}
 play_name = ''
+play_length = ''
+start_time = 0
 with open('history.txt', 'r') as f:
     music_info_dict = json.loads(f.read().rstrip('\n'))
 
-# 这一部分是根据歌名自动从qq音乐上下载对应的歌，只会搜索列表中第一首，
+# 这一部分用来获取音乐时长
+def get_music_length(path):
+    cmd = f"ffmpeg -i '{path}' 2>&1 | grep Duration | cut -d ' ' -f 4 | sed s/,//g"
+    res = subprocess.getstatusoutput(cmd)
+    length = res[1].split(':')
+    length = ':'.join(str(int(float(v))) for v in length[1:])
+    return length
+
+# 这一部分是根据歌名自动从qq音乐上下载对应的歌，只会搜索列表中第一首，并且将相关信息写入music_info_dict
 def download_music(word):
     '''
     从qq音乐来下载某个指定的音乐，由于内存关系，只下载搜索到的第一首，
@@ -49,6 +59,7 @@ def download_music(word):
                 music_info_dict[word]['songname'] = songname
                 music_info_dict[word]['singername'] = singername
                 music_info_dict[word]['path'] = path
+                music_info_dict[word]['length'] = get_music_length(path)
                 music_info_dict[word]['flag'] = 1
             finally:
                 lock.release()
@@ -74,6 +85,7 @@ def download_music(word):
             music_info_dict[word]['songname'] = songname
             music_info_dict[word]['singername'] = singername
             music_info_dict[word]['path'] = path
+            music_info_dict[word]['length'] = get_music_length(path)
             music_info_dict[word]['flag'] = 1
         finally:
             lock.release()
@@ -95,6 +107,13 @@ def barrage_decision():
         barrage = input()
         print(barrage)
         sys.stdout.flush()
+        if barrage == 'ILTshade: mf':
+            print('切歌')
+            cmd = 'pkill mplayer'
+            res = subprocess.getstatusoutput(cmd)
+            sys.stdout.flush()
+            continue
+            
         space_index = barrage.find(' ')
         assert space_index != -1
         nickname = barrage[:space_index - 1]
@@ -111,7 +130,7 @@ def barrage_decision():
                 if music in music_info_dict:
                     music_info_dict[music]['num'] += 1
                 else:
-                    music_info_dict[music] = {'num': 1, 'songname':"", 'singername':"", 'path': "", 'flag':0}
+                    music_info_dict[music] = {'num': 1, 'songname':"", 'singername':"", 'path': "", 'length': "", 'flag':0}
                     threading.Thread(target = download_music, args = (music,)).start()
                 print(music_choose_list[-1])
                 print(music_info_dict)
@@ -153,7 +172,7 @@ def generate_background():
         text_y = 400
         list_count = 0
         for _, k in f:
-            if tmp_music_info_dict[k]['flag'] == 1 and tmp_music_info_dict['num'] > 0:
+            if tmp_music_info_dict[k]['flag'] == 1 and tmp_music_info_dict[k]['num'] > 0:
                 text = tmp_music_info_dict[k]['songname'] + '_' + tmp_music_info_dict[k]['singername'] + ': ' + \
                        str(tmp_music_info_dict[k]['num'])
                 draw.text((text_x, text_y + list_count * gap), text, font = font, fill = '#ff0000')
@@ -161,7 +180,9 @@ def generate_background():
         # 加入正在播放歌曲
         text_x = 400
         text_y = 200
-        text = f'正在播放: {play_name}'
+        play_time = time.time() - start_time
+        play_minute, play_second = divmod(play_time, 60)
+        text = f'正在播放: {play_name} {int(play_minute)}:{int(play_second)} / {play_length}'
         draw.text((text_x, text_y), text, font = font, fill = '#ff0000')
         # 保存图片
         image_show.save('image/background.jpg')
@@ -170,7 +191,7 @@ def generate_background():
         # 将现在的tmp_music_info_dict保存
         with open('history.txt', 'w') as f:
             f.write(json.dumps(tmp_music_info_dict))
-        time.sleep(5)
+        time.sleep(3)
 
 # 这一部分用来生成选择的音频
 def generate_audio():
@@ -178,25 +199,34 @@ def generate_audio():
         print('generate_audio')
         lock.acquire()
         try:
+            #  记录当前播放的音乐信息，包括名称，长度，开始时间
+            global play_name
+            global play_length
+            global start_time
             f = [(v['num'], k) for k, v in music_info_dict.items()]
             f = sorted(f, reverse = True)
             for _, k in f:
-                if music_info_dict[k]['flag'] == 1 and music_info_dict['num'] > 0:
+                if music_info_dict[k]['flag'] == 1 and music_info_dict[k]['num'] > 0:
                     music_info_dict[k]['num'] = 0
                     audio_name = music_info_dict[k]['path']
+                    play_name = music_info_dict[k]['path']
+                    play_length = music_info_dict[k]['length']
+                    start_time = time.time()
                     break
             else:
                 audio_name = 'music/hush.mp3'
+                play_name = 'music/hush.mp3'
+                play_length = '4:20'
+                start_time = time.time()
             print(music_choose_list)
             print(music_info_dict)
+            sys.stdout.flush()
         finally:
             lock.release()
-        print(f'start play {audio_name}')
-        cmd = f'mplayer {audio_name}'
+        cmd = f"mplayer '{audio_name}'"
+        print(f"start play '{audio_name}'")
         print(cmd)
         sys.stdout.flush()
-        global play_name
-        play_name = audio_name
         res = subprocess.getstatusoutput(cmd)
 
 p_barrage = threading.Thread(target = barrage_decision)
