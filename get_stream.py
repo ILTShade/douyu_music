@@ -22,6 +22,7 @@ lock = threading.Lock()
 # flag 0 待下载，-1 下载失败，1 下载成功或者已经存在
 music_choose_list = []
 music_info_dict = {}
+play_name = ''
 with open('history.txt', 'r') as f:
     music_info_dict = json.loads(f.read().rstrip('\n'))
 
@@ -40,7 +41,7 @@ def download_music(word):
         music_info = json.loads(search_result.strip('callback()[]'))['data']['song']['list'][0]
         # 获取该word下搜索得到的歌名和歌手名，如果该文件已经存在，那么直接指向对应文件就好
         songname = music_info['songname']
-        singername = music_info['singer']['name']
+        singername = music_info['singer'][0]['name']
         path = f'music/{songname}_{singername}.mp3'
         if os.path.exists(path):
             lock.acquire()
@@ -89,7 +90,7 @@ def download_music(word):
 
 # 这一部分是处理弹幕输入的部分，应该持续运行，保证可以接收到正确的弹幕并对相关信息进行处理
 def barrage_decision():
-    patten = re.compile(u'mc:(\S*)')
+    patten = re.compile(u'm(\S*)')
     while True:
         barrage = input()
         print(barrage)
@@ -157,6 +158,12 @@ def generate_background():
                        str(tmp_music_info_dict[k]['num'])
                 draw.text((text_x, text_y + list_count * gap), text, font = font, fill = '#ff0000')
                 list_count = list_count + 1
+        # 加入正在播放歌曲
+        text_x = 400
+        text_y = 200
+        text = f'正在播放: {play_name}'
+        draw.text((text_x, text_y), text, font = font, fill = '#ff0000')
+        # 保存图片
         image_show.save('image/background.jpg')
         print('保存图片成功')
         sys.stdout.flush()
@@ -188,6 +195,8 @@ def generate_audio():
         cmd = f'mplayer {audio_name}'
         print(cmd)
         sys.stdout.flush()
+        global play_name
+        play_name = audio_name
         res = subprocess.getstatusoutput(cmd)
 
 p_barrage = threading.Thread(target = barrage_decision)
